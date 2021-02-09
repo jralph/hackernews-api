@@ -122,10 +122,9 @@ func TestTopStories(t *testing.T) {
 		"Client handles body parse error": {url: DefaultURL, expected: []int{}, err: &ResponseParseError{}, statusCode: http.StatusOK, invalidBody: true},
 	}
 
-	httpClient := &MockHTTPClient{}
-
 	for name, opts := range tests {
 		t.Run(name, func(t *testing.T) {
+			httpClient := &MockHTTPClient{}
 			var body []byte
 			body, _ = json.Marshal(opts.expected)
 			if opts.emptyBody {

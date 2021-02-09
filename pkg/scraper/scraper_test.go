@@ -58,12 +58,10 @@ type MockSaver struct {
 
 	SaveTopStoriesResult struct {
 		Error error
-		Save bool
 	}
 
 	SaveItemResult struct {
 		Error error
-		Save bool
 	}
 }
 
@@ -72,20 +70,16 @@ func (m *MockSaver) Clear() {
 }
 
 func (m *MockSaver) SaveTopStories(topStories TopStoriesResponse) error {
-	if m.SaveTopStoriesResult.Save {
-		data, _ := json.Marshal(topStories)
-		m.memoryStore["topStories"] = string(data)
-	}
+	data, _ := json.Marshal(topStories)
+	m.memoryStore["topStories"] = string(data)
 
 	return m.SaveTopStoriesResult.Error
 }
 
 func (m *MockSaver) SaveItem(item *ItemResponse) error {
-	if m.SaveItemResult.Save {
-		itemKey := fmt.Sprintf("item_%s_%d", item.Type, item.ID)
-		data, _ := json.Marshal(item)
-		m.memoryStore[itemKey] = string(data)
-	}
+	itemKey := fmt.Sprintf("item_%s_%d", item.Type, item.ID)
+	data, _ := json.Marshal(item)
+	m.memoryStore[itemKey] = string(data)
 
 	return m.SaveItemResult.Error
 }
@@ -99,182 +93,73 @@ func TestNewScraper(t *testing.T) {
 }
 
 func TestScrape(t *testing.T) {
-	mockClient := &MockHNClient{}
-	mockSaver := &MockSaver{
-		memoryStore: map[string]string{},
+	type test struct {
+		topStoriesResponse *TopStoriesResponse
+		topStoriesError error
+		itemsResponse *ItemResponse
+		itemError error
+		maxKids int
+		saverError error
 	}
-	scraper := NewScraper(
-		WithClient(mockClient),
-		WithSaver(mockSaver),
-	)
 
-	t.Run("Scrape returns number of items scraped", func(t *testing.T) {
-		mockSaver.Clear()
+	tests := map[string]test{
+		"Scrape returns number of items scraped": {topStoriesResponse: &TopStoriesResponse{}},
+		"Scrape returns expected number of items": {topStoriesResponse: &TopStoriesResponse{1, 2, 3, 4}, itemsResponse: &ItemResponse{}},
+		"Scrape handles client http response error": {topStoriesError: errors.New("mock: error")},
+		"Scrape saves top items to saver": {topStoriesResponse: &TopStoriesResponse{1, 2, 3, 4}, itemsResponse: &ItemResponse{}},
+		"Scrape saves items to saver": {topStoriesResponse: &TopStoriesResponse{1, 2, 3, 4}, itemsResponse: &ItemResponse{Type: "story"}},
+		"Scrape handles saver error": {topStoriesResponse: &TopStoriesResponse{1, 2, 3, 4}, itemsResponse: &ItemResponse{}, saverError: errors.New("mock: error")},
+		"Scrape saves items to saver and follows nested items": {topStoriesResponse: &TopStoriesResponse{1, 2, 3, 4}, itemsResponse: &ItemResponse{Type: "story"}, maxKids: 5},
+	}
 
-		mockClient.TopStoriesResult.Response = TopStoriesResponse{}
-		mockClient.TopStoriesResult.Error = nil
+	for name, opts := range tests {
+		t.Run(name, func(t *testing.T) {
+			mockClient := &MockHNClient{}
+			mockSaver := &MockSaver{
+				memoryStore: map[string]string{},
+			}
+			scraper := NewScraper(
+				WithClient(mockClient),
+				WithSaver(mockSaver),
+			)
 
-		mockClient.ItemResult.Response = &ItemResponse{}
-		mockClient.ItemResult.Error = nil
-		mockClient.ItemResult.MaxKids = 0
+			if opts.topStoriesResponse != nil {
+				mockClient.TopStoriesResult.Response = *opts.topStoriesResponse
+			}
 
-		mockSaver.SaveTopStoriesResult.Save = false
-		mockSaver.SaveTopStoriesResult.Error = nil
-		mockSaver.SaveItemResult.Save = false
-		mockSaver.SaveItemResult.Error = nil
+			mockClient.TopStoriesResult.Error = opts.topStoriesError
+			mockClient.ItemResult.Response = opts.itemsResponse
+			mockClient.ItemResult.Error = opts.itemError
+			mockClient.ItemResult.MaxKids = opts.maxKids
 
-		result, err := scraper.Scrape()
-		require.NoError(t, err)
-		assert.Equal(t, 0, result)
-	})
+			mockSaver.SaveTopStoriesResult.Error = opts.saverError
+			mockSaver.SaveItemResult.Error = opts.saverError
 
-	t.Run("Scrape returns expected number of items", func(t *testing.T) {
-		expected := 4
+			expectedSavedTopItems, _ := json.Marshal(opts.topStoriesResponse)
 
-		mockSaver.Clear()
+			result, err := scraper.Scrape()
 
-		mockClient.TopStoriesResult.Response = TopStoriesResponse{1, 2, 3, 4}
-		mockClient.TopStoriesResult.Error = nil
+			stored, ok := mockSaver.memoryStore["topStories"]
 
-		mockClient.ItemResult.Response = &ItemResponse{}
-		mockClient.ItemResult.Error = nil
-		mockClient.ItemResult.MaxKids = 0
+			if opts.topStoriesError != nil || opts.itemError != nil || opts.saverError != nil {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.True(t, ok)
 
-		mockSaver.SaveTopStoriesResult.Save = false
-		mockSaver.SaveTopStoriesResult.Error = nil
-		mockSaver.SaveItemResult.Save = false
-		mockSaver.SaveItemResult.Error = nil
+				if opts.topStoriesResponse != nil {
+					assert.Equal(t, len(*opts.topStoriesResponse), result)
+					assert.Equal(t, string(expectedSavedTopItems), stored)
+				}
 
-		result, err := scraper.Scrape()
-		require.NoError(t, err)
-		assert.Equal(t, expected, result)
-	})
-
-	t.Run("Scrape handles client http response error", func(t *testing.T) {
-		mockSaver.Clear()
-
-		mockClient.TopStoriesResult.Response = TopStoriesResponse{}
-		mockClient.TopStoriesResult.Error = errors.New("some mock error")
-
-		mockClient.ItemResult.Response = &ItemResponse{}
-		mockClient.ItemResult.Error = nil
-		mockClient.ItemResult.MaxKids = 0
-
-		mockSaver.SaveTopStoriesResult.Save = false
-		mockSaver.SaveTopStoriesResult.Error = nil
-		mockSaver.SaveItemResult.Save = false
-		mockSaver.SaveItemResult.Error = nil
-
-		result, err := scraper.Scrape()
-		require.Error(t, err)
-		assert.Equal(t, 0, result)
-	})
-
-	t.Run("Scrape saves top items to saver", func(t *testing.T) {
-		expected := 4
-
-		topStories := TopStoriesResponse{1, 2, 3, 4}
-
-		mockSaver.Clear()
-
-		mockClient.TopStoriesResult.Response = topStories
-		mockClient.TopStoriesResult.Error = nil
-
-		mockClient.ItemResult.Response = &ItemResponse{
-			Type: "story",
-		}
-		mockClient.ItemResult.Error = nil
-		mockClient.ItemResult.MaxKids = 0
-
-		mockSaver.SaveTopStoriesResult.Save = true
-		mockSaver.SaveTopStoriesResult.Error = nil
-		mockSaver.SaveItemResult.Save = false
-		mockSaver.SaveItemResult.Error = nil
-
-		expectedSavedTopItems, _ := json.Marshal(topStories)
-
-		result, err := scraper.Scrape()
-		stored, ok := mockSaver.memoryStore["topStories"]
-		require.NoError(t, err)
-		require.True(t, ok)
-		assert.Equal(t, expected, result)
-		assert.Equal(t, string(expectedSavedTopItems), stored)
-	})
-
-	t.Run("Scrape saves items to saver", func(t *testing.T) {
-		expected := 4
-
-		topStories := TopStoriesResponse{1, 2, 3, 4}
-
-		mockSaver.Clear()
-
-		mockClient.TopStoriesResult.Response = topStories
-		mockClient.TopStoriesResult.Error = nil
-
-		mockClient.ItemResult.Response = &ItemResponse{
-			Type: "story",
-		}
-		mockClient.ItemResult.Error = nil
-		mockClient.ItemResult.MaxKids = 0
-
-		mockSaver.SaveTopStoriesResult.Save = true
-		mockSaver.SaveTopStoriesResult.Error = nil
-		mockSaver.SaveItemResult.Save = true
-		mockSaver.SaveItemResult.Error = nil
-
-		result, err := scraper.Scrape()
-		require.NoError(t, err)
-		assert.Equal(t, expected, result)
-		assert.Len(t, mockSaver.memoryStore, 5)
-	})
-
-	t.Run("Scrape handles saver error", func(t *testing.T) {
-		topStories := TopStoriesResponse{1, 2, 3, 4}
-
-		mockSaver.Clear()
-
-		mockClient.TopStoriesResult.Response = topStories
-		mockClient.TopStoriesResult.Error = nil
-
-		mockClient.ItemResult.Response = &ItemResponse{
-			Type: "story",
-		}
-		mockClient.ItemResult.Error = nil
-		mockClient.ItemResult.MaxKids = 0
-
-		mockSaver.SaveTopStoriesResult.Save = false
-		mockSaver.SaveTopStoriesResult.Error = errors.New("mock error")
-		mockSaver.SaveItemResult.Save = false
-		mockSaver.SaveItemResult.Error = nil
-
-		_, err := scraper.Scrape()
-		require.Error(t, err)
-	})
-
-	t.Run("Scrape saves items to saver and follows nested items", func(t *testing.T) {
-		expected := 4
-
-		topStories := TopStoriesResponse{1, 2, 3, 4}
-
-		mockSaver.Clear()
-
-		mockClient.TopStoriesResult.Response = topStories
-		mockClient.TopStoriesResult.Error = nil
-
-		mockClient.ItemResult.Response = &ItemResponse{
-			Type: "story",
-		}
-		mockClient.ItemResult.Error = nil
-		mockClient.ItemResult.MaxKids = 5
-
-		mockSaver.SaveTopStoriesResult.Save = true
-		mockSaver.SaveTopStoriesResult.Error = nil
-		mockSaver.SaveItemResult.Save = true
-		mockSaver.SaveItemResult.Error = nil
-
-		result, err := scraper.Scrape()
-		require.NoError(t, err)
-		assert.Equal(t, expected, result)
-		assert.Len(t, mockSaver.memoryStore, 5 + mockClient.ItemResult.MaxKids)
-	})
+				if opts.itemsResponse != nil {
+					expectedKeys := 0
+					if len(*opts.topStoriesResponse) > 0 {
+						expectedKeys = 1
+					}
+					assert.Len(t, mockSaver.memoryStore, len(*opts.topStoriesResponse) + opts.maxKids + expectedKeys)
+				}
+			}
+		})
+	}
 }
