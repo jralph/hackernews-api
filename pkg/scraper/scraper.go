@@ -90,14 +90,9 @@ func (s *Scraper) ScrapeItem(id int) error {
 		return err
 	}
 
-	for _, itemID := range item.Kids {
-		err := s.ScrapeItem(itemID)
-		if err != nil {
-			return err
-		}
-	}
+	nested := append(item.Kids, item.Parts...)
 
-	for _, itemID := range item.Parts {
+	for _, itemID := range nested {
 		err := s.ScrapeItem(itemID)
 		if err != nil {
 			return err
