@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/jralph/hackernews-api/pkg/scraper"
+	"github.com/jralph/hackernews-api/internal/scraper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -96,8 +96,10 @@ func (m *MockHTTPClient) Do(req *http.Request) (*http.Response, error) {
 func TestNewClient(t *testing.T) {
 	client := NewClient()
 
-	t.Run("NewScraper returns instance of Client", func(t *testing.T) {
+	t.Run("NewScraper returns instance of Client and implements scraper client interface", func(t *testing.T) {
+		_, ok := interface{}(client).(scraper.Client)
 		require.IsType(t, &Client{}, client)
+		require.True(t, ok)
 	})
 }
 

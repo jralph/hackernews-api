@@ -6,8 +6,9 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"time"
 
-	"github.com/jralph/hackernews-api/pkg/scraper"
+	"github.com/jralph/hackernews-api/internal/scraper"
 )
 
 const (
@@ -16,14 +17,16 @@ const (
 
 type IncorrectHTTPStatusCodeError struct {
 	StatusCode int
+	URL        string
 }
 
 func (e *IncorrectHTTPStatusCodeError) Error() string {
-	return fmt.Sprintf("client: got http status code %d", e.StatusCode)
+	return fmt.Sprintf("client: got http status code %d for url %s", e.StatusCode, e.URL)
 }
 
 type HTTPResponseError struct {
 	PreviousError error
+	URL           string
 }
 
 func (e *HTTPResponseError) Error() string {
@@ -32,10 +35,11 @@ func (e *HTTPResponseError) Error() string {
 
 type HTTPRequestError struct {
 	PreviousError error
+	URL           string
 }
 
 func (e *HTTPRequestError) Error() string {
-	return fmt.Sprintf("client: error creating request: %s", e.PreviousError)
+	return fmt.Sprintf("client: error creating request for url %s: %s", e.URL, e.PreviousError)
 }
 
 type ResponseParseError struct {
@@ -66,7 +70,9 @@ func WithAPIBaseURL(url string) Option {
 }
 
 func NewClient(opts ...Option) *Client {
-	defaultClient := &http.Client{}
+	defaultClient := &http.Client{
+		Timeout: time.Second * 10,
+	}
 
 	client := &Client{
 		httpClient: defaultClient,
@@ -96,7 +102,7 @@ func (c *Client) TopStories() (scraper.TopStoriesResponse, error) {
 }
 
 func (c *Client) Item(id int) (*scraper.ItemResponse, error) {
-	resp, err := c.get(fmt.Sprintf("item/%d.json", id))
+	resp, err := c.get(fmt.Sprintf("/item/%d.json", id))
 	if err != nil {
 		return &scraper.ItemResponse{}, err
 	}
@@ -111,18 +117,19 @@ func (c *Client) Item(id int) (*scraper.ItemResponse, error) {
 }
 
 func (c *Client) get(path string) (*http.Response, error) {
-	request, err := http.NewRequest("GET", fmt.Sprintf("%s%s", c.url, path), nil)
+	url := fmt.Sprintf("%s%s", c.url, path)
+	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, &HTTPRequestError{PreviousError: err}
+		return nil, &HTTPRequestError{PreviousError: err, URL: url}
 	}
 
 	resp, err := c.httpClient.Do(request)
 	if err != nil {
-		return resp, &HTTPResponseError{PreviousError: err}
+		return resp, &HTTPResponseError{PreviousError: err, URL: url}
 	}
 
 	if resp.StatusCode != 200 {
-		return resp, &IncorrectHTTPStatusCodeError{resp.StatusCode}
+		return resp, &IncorrectHTTPStatusCodeError{StatusCode: resp.StatusCode, URL: url}
 	}
 
 	return resp, nil
