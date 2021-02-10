@@ -12,25 +12,25 @@ type Client interface {
 type TopStoriesResponse []int
 
 type ItemResponse struct {
-	By string `json:"by,omitempty"`
-	Descendants int `json:"descendants,omitempty"`
-	ID int `json:"id"`
-	Kids []int `json:"kids,omitempty"`
-	Score int `json:"score,omitempty"`
-	Time int `json:"time,omitempty"`
-	Title string `json:"title,omitempty"`
-	Type string `json:"type,omitempty"`
-	URL string `json:"url,omitempty"`
-	Text string `json:"text,omitempty"`
-	Parts []int `json:"parts,omitempty"`
-	Poll int `json:"poll,omitempty"`
-	Parent int `json:"parent,omitempty"`
-	Deleted bool `json:"deleted,omitempty"`
-	Dead bool `json:"dead,omitempty"`
+	By          string `json:"by,omitempty"`
+	Descendants int    `json:"descendants,omitempty"`
+	ID          int    `json:"id"`
+	Kids        []int  `json:"kids,omitempty"`
+	Score       int    `json:"score,omitempty"`
+	Time        int    `json:"time,omitempty"`
+	Title       string `json:"title,omitempty"`
+	Type        string `json:"type,omitempty"`
+	URL         string `json:"url,omitempty"`
+	Text        string `json:"text,omitempty"`
+	Parts       []int  `json:"parts,omitempty"`
+	Poll        int    `json:"poll,omitempty"`
+	Parent      int    `json:"parent,omitempty"`
+	Deleted     bool   `json:"deleted,omitempty"`
+	Dead        bool   `json:"dead,omitempty"`
 }
 
 type Scraper struct {
-	saver Saver
+	saver  Saver
 	client Client
 }
 
@@ -101,5 +101,3 @@ func (s *Scraper) ScrapeItem(id int) error {
 
 	return nil
 }
-
-

@@ -48,7 +48,7 @@ func (e *ResponseParseError) Error() string {
 
 type Client struct {
 	httpClient HTTPClient
-	url string
+	url        string
 }
 
 type Option func(*Client)
@@ -70,7 +70,7 @@ func NewClient(opts ...Option) *Client {
 
 	client := &Client{
 		httpClient: defaultClient,
-		url: DefaultURL,
+		url:        DefaultURL,
 	}
 
 	for _, opt := range opts {

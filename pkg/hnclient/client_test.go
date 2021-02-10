@@ -16,67 +16,67 @@ import (
 
 var (
 	exampleStory = scraper.ItemResponse{
-		By: "exampleuser",
+		By:          "exampleuser",
 		Descendants: 4,
-		ID: 123,
-		Kids: []int{456, 789, 123, 456},
-		Score: 123,
-		Time: 1210981217,
-		Title: "My Story: Hello!",
-		Type: "story",
-		URL: "https://google.com",
+		ID:          123,
+		Kids:        []int{456, 789, 123, 456},
+		Score:       123,
+		Time:        1210981217,
+		Title:       "My Story: Hello!",
+		Type:        "story",
+		URL:         "https://google.com",
 	}
 	exampleComment = scraper.ItemResponse{
-		By: "exampleuser",
+		By:          "exampleuser",
 		Descendants: 4,
-		ID: 123,
-		Parent: 555,
-		Kids: []int{456, 789, 123, 456},
-		Time: 1210981217,
-		Text: "Comment: Hello!",
-		Type: "comment",
+		ID:          123,
+		Parent:      555,
+		Kids:        []int{456, 789, 123, 456},
+		Time:        1210981217,
+		Text:        "Comment: Hello!",
+		Type:        "comment",
 	}
 	exampleAsk = scraper.ItemResponse{
-		By: "exampleuser",
+		By:          "exampleuser",
 		Descendants: 4,
-		ID: 123,
-		Parent: 555,
-		Kids: []int{456, 789, 123, 456},
-		Score: 123,
-		Time: 1210981217,
-		Title: "Ask: Ask me anything!",
-		Text: "Some example ask text!",
-		Type: "story",
+		ID:          123,
+		Parent:      555,
+		Kids:        []int{456, 789, 123, 456},
+		Score:       123,
+		Time:        1210981217,
+		Title:       "Ask: Ask me anything!",
+		Text:        "Some example ask text!",
+		Type:        "story",
 	}
 	exampleJob = scraper.ItemResponse{
-		By: "exampleuser",
-		ID: 123,
+		By:    "exampleuser",
+		ID:    123,
 		Score: 123,
-		Time: 1210981217,
+		Time:  1210981217,
 		Title: "My Job: Hello!",
-		Text: "Some example job text!",
-		Type: "job",
-		URL: "https://google.com",
+		Text:  "Some example job text!",
+		Type:  "job",
+		URL:   "https://google.com",
 	}
 	examplePoll = scraper.ItemResponse{
-		By: "exampleuser",
+		By:          "exampleuser",
 		Descendants: 4,
-		ID: 123,
-		Kids: []int{456, 789, 123, 456},
-		Parts: []int{777, 666, 888},
-		Score: 123,
-		Time: 1210981217,
-		Title: "My Poll: Hello!",
-		Text: "Some example poll text!",
-		Type: "poll",
+		ID:          123,
+		Kids:        []int{456, 789, 123, 456},
+		Parts:       []int{777, 666, 888},
+		Score:       123,
+		Time:        1210981217,
+		Title:       "My Poll: Hello!",
+		Text:        "Some example poll text!",
+		Type:        "poll",
 	}
 	examplePollPart = scraper.ItemResponse{
-		By: "exampleuser",
-		ID: 123,
-		Poll: 444,
+		By:    "exampleuser",
+		ID:    123,
+		Poll:  444,
 		Score: 123,
-		Text: "Some example poll option text!",
-		Type: "pollopt",
+		Text:  "Some example poll option text!",
+		Type:  "pollopt",
 	}
 )
 
@@ -85,7 +85,7 @@ type MockHTTPClient struct {
 
 	DoResponse struct {
 		Response *http.Response
-		Error error
+		Error    error
 	}
 }
 
@@ -103,23 +103,23 @@ func TestNewClient(t *testing.T) {
 
 func TestTopStories(t *testing.T) {
 	type test struct {
-		url string
-		expected scraper.TopStoriesResponse
-		err error
-		statusCode int
+		url              string
+		expected         scraper.TopStoriesResponse
+		err              error
+		statusCode       int
 		httpRequestError bool
-		emptyBody bool
-		invalidBody bool
+		emptyBody        bool
+		invalidBody      bool
 	}
 
 	tests := map[string]test{
-		"Client returns list of item ids": {url: DefaultURL, expected: []int{}, err: nil, statusCode: http.StatusOK},
-		"Client returns expected list of item ids": {url: DefaultURL, expected: []int{1234, 5678, 9012}, err: nil, statusCode: http.StatusOK},
-		"Client handles http status error": {url: DefaultURL, expected: []int{}, err: &IncorrectHTTPStatusCodeError{}, statusCode: http.StatusBadRequest},
-		"Client handles http request error": {url: DefaultURL, expected: []int{}, err: &HTTPResponseError{}, httpRequestError: true},
+		"Client returns list of item ids":            {url: DefaultURL, expected: []int{}, err: nil, statusCode: http.StatusOK},
+		"Client returns expected list of item ids":   {url: DefaultURL, expected: []int{1234, 5678, 9012}, err: nil, statusCode: http.StatusOK},
+		"Client handles http status error":           {url: DefaultURL, expected: []int{}, err: &IncorrectHTTPStatusCodeError{}, statusCode: http.StatusBadRequest},
+		"Client handles http request error":          {url: DefaultURL, expected: []int{}, err: &HTTPResponseError{}, httpRequestError: true},
 		"Client handles http request creation error": {url: " http://example.com", expected: []int{}, err: &HTTPRequestError{}},
-		"Client handles body read error": {url: DefaultURL, expected: []int{}, err: &ResponseParseError{}, statusCode: http.StatusOK, emptyBody: true},
-		"Client handles body parse error": {url: DefaultURL, expected: []int{}, err: &ResponseParseError{}, statusCode: http.StatusOK, invalidBody: true},
+		"Client handles body read error":             {url: DefaultURL, expected: []int{}, err: &ResponseParseError{}, statusCode: http.StatusOK, emptyBody: true},
+		"Client handles body parse error":            {url: DefaultURL, expected: []int{}, err: &ResponseParseError{}, statusCode: http.StatusOK, invalidBody: true},
 	}
 
 	for name, opts := range tests {
@@ -134,7 +134,7 @@ func TestTopStories(t *testing.T) {
 				body = []byte("invalid")
 			}
 			httpClient.DoResponse.Response = &http.Response{
-				Body: ioutil.NopCloser(bytes.NewReader(body)),
+				Body:       ioutil.NopCloser(bytes.NewReader(body)),
 				StatusCode: opts.statusCode,
 			}
 
@@ -169,24 +169,24 @@ func TestTopStories(t *testing.T) {
 
 func TestItem(t *testing.T) {
 	type test struct {
-		url string
-		id int
-		expected *scraper.ItemResponse
-		err error
-		statusCode int
+		url              string
+		id               int
+		expected         *scraper.ItemResponse
+		err              error
+		statusCode       int
 		httpRequestError bool
-		emptyBody bool
-		invalidBody bool
+		emptyBody        bool
+		invalidBody      bool
 	}
 
 	tests := map[string]test{
-		"Client returns item": {url: DefaultURL, id: 123, expected: &scraper.ItemResponse{}, err: nil, statusCode: http.StatusOK},
-		"Client returns expected item for given id": {url: DefaultURL, id: 123, expected: &exampleStory, err: nil, statusCode: http.StatusOK},
-		"Client handles http status error": {url: DefaultURL, expected: &scraper.ItemResponse{}, err: &IncorrectHTTPStatusCodeError{}, statusCode: http.StatusBadRequest},
-		"Client handles http request error": {url: DefaultURL, expected: &scraper.ItemResponse{}, err: &HTTPResponseError{}, httpRequestError: true},
+		"Client returns item":                        {url: DefaultURL, id: 123, expected: &scraper.ItemResponse{}, err: nil, statusCode: http.StatusOK},
+		"Client returns expected item for given id":  {url: DefaultURL, id: 123, expected: &exampleStory, err: nil, statusCode: http.StatusOK},
+		"Client handles http status error":           {url: DefaultURL, expected: &scraper.ItemResponse{}, err: &IncorrectHTTPStatusCodeError{}, statusCode: http.StatusBadRequest},
+		"Client handles http request error":          {url: DefaultURL, expected: &scraper.ItemResponse{}, err: &HTTPResponseError{}, httpRequestError: true},
 		"Client handles http request creation error": {url: " http://example.com", expected: &scraper.ItemResponse{}, err: &HTTPRequestError{}},
-		"Client handles body read error": {url: DefaultURL, expected: &scraper.ItemResponse{}, err: &ResponseParseError{}, statusCode: http.StatusOK, emptyBody: true},
-		"Client handles body parse error": {url: DefaultURL, expected: &scraper.ItemResponse{}, err: &ResponseParseError{}, statusCode: http.StatusOK, invalidBody: true},
+		"Client handles body read error":             {url: DefaultURL, expected: &scraper.ItemResponse{}, err: &ResponseParseError{}, statusCode: http.StatusOK, emptyBody: true},
+		"Client handles body parse error":            {url: DefaultURL, expected: &scraper.ItemResponse{}, err: &ResponseParseError{}, statusCode: http.StatusOK, invalidBody: true},
 	}
 
 	httpClient := &MockHTTPClient{}
@@ -202,7 +202,7 @@ func TestItem(t *testing.T) {
 				body = []byte("invalid")
 			}
 			httpClient.DoResponse.Response = &http.Response{
-				Body: ioutil.NopCloser(bytes.NewReader(body)),
+				Body:       ioutil.NopCloser(bytes.NewReader(body)),
 				StatusCode: opts.statusCode,
 			}
 

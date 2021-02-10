@@ -17,13 +17,13 @@ type MockHNClient struct {
 
 	TopStoriesResult struct {
 		Response TopStoriesResponse
-		Error error
+		Error    error
 	}
 
 	ItemResult struct {
 		Response *ItemResponse
-		Error error
-		MaxKids int
+		Error    error
+		MaxKids  int
 	}
 
 	returnedItemKids int
@@ -65,10 +65,6 @@ type MockSaver struct {
 	}
 }
 
-func (m *MockSaver) Clear() {
-	m.memoryStore = map[string]string{}
-}
-
 func (m *MockSaver) SaveTopStories(topStories TopStoriesResponse) error {
 	data, _ := json.Marshal(topStories)
 	m.memoryStore["topStories"] = string(data)
@@ -95,20 +91,20 @@ func TestNewScraper(t *testing.T) {
 func TestScrape(t *testing.T) {
 	type test struct {
 		topStoriesResponse *TopStoriesResponse
-		topStoriesError error
-		itemsResponse *ItemResponse
-		itemError error
-		maxKids int
-		saverError error
+		topStoriesError    error
+		itemsResponse      *ItemResponse
+		itemError          error
+		maxKids            int
+		saverError         error
 	}
 
 	tests := map[string]test{
-		"Scrape returns number of items scraped": {topStoriesResponse: &TopStoriesResponse{}},
-		"Scrape returns expected number of items": {topStoriesResponse: &TopStoriesResponse{1, 2, 3, 4}, itemsResponse: &ItemResponse{}},
-		"Scrape handles client http response error": {topStoriesError: errors.New("mock: error")},
-		"Scrape saves top items to saver": {topStoriesResponse: &TopStoriesResponse{1, 2, 3, 4}, itemsResponse: &ItemResponse{}},
-		"Scrape saves items to saver": {topStoriesResponse: &TopStoriesResponse{1, 2, 3, 4}, itemsResponse: &ItemResponse{Type: "story"}},
-		"Scrape handles saver error": {topStoriesResponse: &TopStoriesResponse{1, 2, 3, 4}, itemsResponse: &ItemResponse{}, saverError: errors.New("mock: error")},
+		"Scrape returns number of items scraped":               {topStoriesResponse: &TopStoriesResponse{}},
+		"Scrape returns expected number of items":              {topStoriesResponse: &TopStoriesResponse{1, 2, 3, 4}, itemsResponse: &ItemResponse{}},
+		"Scrape handles client http response error":            {topStoriesError: errors.New("mock: error")},
+		"Scrape saves top items to saver":                      {topStoriesResponse: &TopStoriesResponse{1, 2, 3, 4}, itemsResponse: &ItemResponse{}},
+		"Scrape saves items to saver":                          {topStoriesResponse: &TopStoriesResponse{1, 2, 3, 4}, itemsResponse: &ItemResponse{Type: "story"}},
+		"Scrape handles saver error":                           {topStoriesResponse: &TopStoriesResponse{1, 2, 3, 4}, itemsResponse: &ItemResponse{}, saverError: errors.New("mock: error")},
 		"Scrape saves items to saver and follows nested items": {topStoriesResponse: &TopStoriesResponse{1, 2, 3, 4}, itemsResponse: &ItemResponse{Type: "story"}, maxKids: 5},
 	}
 
@@ -157,7 +153,7 @@ func TestScrape(t *testing.T) {
 					if len(*opts.topStoriesResponse) > 0 {
 						expectedKeys = 1
 					}
-					assert.Len(t, mockSaver.memoryStore, len(*opts.topStoriesResponse) + opts.maxKids + expectedKeys)
+					assert.Len(t, mockSaver.memoryStore, len(*opts.topStoriesResponse)+opts.maxKids+expectedKeys)
 				}
 			}
 		})
