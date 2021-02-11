@@ -70,13 +70,11 @@ func WithAPIBaseURL(url string) Option {
 }
 
 func NewClient(opts ...Option) *Client {
-	defaultClient := &http.Client{
-		Timeout: time.Second * 10,
-	}
-
 	client := &Client{
-		httpClient: defaultClient,
-		url:        DefaultURL,
+		httpClient: &http.Client{
+			Timeout: time.Second * 10,
+		},
+		url: DefaultURL,
 	}
 
 	for _, opt := range opts {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"time"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/jralph/hackernews-api/internal/scraper"
@@ -32,14 +33,14 @@ func WithRedis(client *redis.Client) Option {
 }
 
 func NewRedisStore(opts ...Option) *Redis {
-	client := &Redis{}
+	client := &Redis{
+		client: redis.NewClient(&redis.Options{
+			Addr: "127.0.0.1",
+		}),
+	}
 
 	for _, opt := range opts {
 		opt(client)
-	}
-
-	if client.client == nil {
-		panic(fmt.Errorf("storage: must provide either `WithRedis` or `WithRedisOptions` to NewRedisStore"))
 	}
 
 	return client
@@ -118,4 +119,28 @@ func (r *Redis) GetItem(id int) (*scraper.ItemResponse, error) {
 	err := json.Unmarshal([]byte(data), &scrapedItem)
 
 	return &scrapedItem, err
+}
+
+func (r *Redis) Cache(key string, duration time.Duration, target interface{}, f func() interface{}) error {
+	// Fetch from cache
+	data, err := r.client.Get(ctx, key).Result()
+
+	// If cache hit unmarshal into target and return
+	if data != "" && err == nil {
+		err = json.Unmarshal([]byte(data), target)
+		if err == nil {
+			return nil
+		}
+	}
+
+	// If cache hit error, unmarshal error, or no cache hit, generate and cache
+	toCache := f()
+
+	encoded, err := json.Marshal(toCache)
+	if err != nil {
+		return err
+	}
+	_ = json.Unmarshal(encoded, target)
+
+	return r.client.Set(ctx, key, encoded, duration).Err()
 }

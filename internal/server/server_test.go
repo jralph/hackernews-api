@@ -7,15 +7,17 @@ import (
 	"testing"
 
 	"github.com/jralph/hackernews-api/internal/scraper"
-
-	"github.com/stretchr/testify/mock"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 type MockStorage struct {
 	mock.Mock
+}
+
+func (m *MockStorage) GetAllItems() ([]int, error) {
+	return []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, nil
 }
 
 func (m *MockStorage) GetAllPosts(postType *string) ([]int, error) {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/jralph/hackernews-api/internal/scraper"
 
@@ -37,6 +38,7 @@ type Storage interface {
 	GetAllItems() ([]int, error)
 	GetAllPosts(*string) ([]int, error)
 	GetItem(int) (*scraper.ItemResponse, error)
+	Cache(string, time.Duration, interface{}, func() interface{}) error
 }
 
 type Config struct {
@@ -76,110 +78,156 @@ func CreateServer(opts ...Option) http.Handler {
 	})
 
 	e.GET("/items", func(c echo.Context) error {
-		items, _ := conf.store.GetAllItems()
+		data := AllItemsResponse{}
+		err := conf.store.Cache("items", time.Minute*5, &data, func() interface{} {
+			response := AllItemsResponse{}
+			items, _ := conf.store.GetAllItems()
 
-		response := AllItemsResponse{}
+			for _, id := range items {
+				response = append(response, ItemListing{
+					ID:       id,
+					Location: fmt.Sprintf("/items/%d", id),
+				})
+			}
 
-		for _, id := range items {
-			response = append(response, ItemListing{
-				ID:       id,
-				Location: fmt.Sprintf("/items/%d", id),
-			})
+			return &response
+		})
+
+		if err != nil {
+			c.Logger().Error(err)
+			return c.String(http.StatusInternalServerError, "")
 		}
 
-		return c.JSON(http.StatusOK, response)
+		return c.JSON(http.StatusOK, data)
 	})
 
 	e.GET("/posts", func(c echo.Context) error {
-		items, _ := conf.store.GetAllPosts(nil)
+		data := AllItemsResponse{}
+		err := conf.store.Cache("posts", time.Minute*5, &data, func() interface{} {
+			response := AllItemsResponse{}
+			items, _ := conf.store.GetAllPosts(nil)
 
-		response := AllItemsResponse{}
+			for _, id := range items {
+				response = append(response, ItemListing{
+					ID:       id,
+					Location: fmt.Sprintf("/items/%d", id),
+				})
+			}
 
-		for _, id := range items {
-			response = append(response, ItemListing{
-				ID:       id,
-				Location: fmt.Sprintf("/items/%d", id),
-			})
+			return &response
+		})
+
+		if err != nil {
+			c.Logger().Error(err)
+			return c.String(http.StatusInternalServerError, "")
 		}
 
-		return c.JSON(http.StatusOK, response)
+		return c.JSON(http.StatusOK, data)
 	})
 
 	e.GET("/items/:id", func(c echo.Context) error {
 		id, _ := strconv.Atoi(c.Param("id"))
-		savedItem, _ := conf.store.GetItem(id)
 
-		if savedItem == nil {
-			return c.JSON(http.StatusNotFound, nil)
-		}
-
-		item := &ItemResponse{
-			By:          savedItem.By,
-			Descendants: savedItem.Descendants,
-			ID:          savedItem.ID,
-			Score:       savedItem.Score,
-			Time:        savedItem.Time,
-			Title:       savedItem.Title,
-			Type:        savedItem.Type,
-			URL:         savedItem.URL,
-			Text:        savedItem.Text,
-			Poll:        savedItem.Poll,
-		}
-
-		for _, kidID := range savedItem.Kids {
-			item.Kids = append(item.Kids, &ItemListing{
-				ID:       kidID,
-				Location: fmt.Sprintf("/items/%d", kidID),
-			})
-		}
-
-		for _, PartID := range savedItem.Parts {
-			item.Kids = append(item.Kids, &ItemListing{
-				ID:       PartID,
-				Location: fmt.Sprintf("/items/%d", PartID),
-			})
-		}
-
-		if savedItem.Parent != 0 {
-			item.Parent = &ItemListing{
-				ID:       savedItem.Parent,
-				Location: fmt.Sprintf("/items/%d", savedItem.Parent),
+		data := &ItemResponse{}
+		err := conf.store.Cache(fmt.Sprintf("item/%d", id), time.Minute*5, data, func() interface{} {
+			savedItem, _ := conf.store.GetItem(id)
+			if savedItem == nil {
+				return c.JSON(http.StatusNotFound, nil)
 			}
+
+			item := &ItemResponse{
+				By:          savedItem.By,
+				Descendants: savedItem.Descendants,
+				ID:          savedItem.ID,
+				Score:       savedItem.Score,
+				Time:        savedItem.Time,
+				Title:       savedItem.Title,
+				Type:        savedItem.Type,
+				URL:         savedItem.URL,
+				Text:        savedItem.Text,
+				Poll:        savedItem.Poll,
+			}
+
+			for _, kidID := range savedItem.Kids {
+				item.Kids = append(item.Kids, &ItemListing{
+					ID:       kidID,
+					Location: fmt.Sprintf("/items/%d", kidID),
+				})
+			}
+
+			for _, PartID := range savedItem.Parts {
+				item.Kids = append(item.Kids, &ItemListing{
+					ID:       PartID,
+					Location: fmt.Sprintf("/items/%d", PartID),
+				})
+			}
+
+			if savedItem.Parent != 0 {
+				item.Parent = &ItemListing{
+					ID:       savedItem.Parent,
+					Location: fmt.Sprintf("/items/%d", savedItem.Parent),
+				}
+			}
+
+			return item
+		})
+
+		if err != nil {
+			c.Logger().Error(err)
+			return c.String(http.StatusInternalServerError, "")
 		}
 
-		return c.JSON(http.StatusOK, item)
+		return c.JSON(http.StatusOK, data)
 	})
 
 	e.GET("/stories", func(c echo.Context) error {
-		postType := "story"
-		items, _ := conf.store.GetAllPosts(&postType)
+		data := AllItemsResponse{}
+		err := conf.store.Cache("stories", time.Minute*5, &data, func() interface{} {
+			response := AllItemsResponse{}
+			postType := "story"
+			items, _ := conf.store.GetAllPosts(&postType)
 
-		response := AllItemsResponse{}
+			for _, id := range items {
+				response = append(response, ItemListing{
+					ID:       id,
+					Location: fmt.Sprintf("/items/%d", id),
+				})
+			}
 
-		for _, id := range items {
-			response = append(response, ItemListing{
-				ID:       id,
-				Location: fmt.Sprintf("/items/%d", id),
-			})
+			return &response
+		})
+
+		if err != nil {
+			c.Logger().Error(err)
+			return c.String(http.StatusInternalServerError, "")
 		}
 
-		return c.JSON(http.StatusOK, response)
+		return c.JSON(http.StatusOK, data)
 	})
 
 	e.GET("/jobs", func(c echo.Context) error {
-		postType := "job"
-		items, _ := conf.store.GetAllPosts(&postType)
+		data := AllItemsResponse{}
+		err := conf.store.Cache("jobs", time.Minute*5, &data, func() interface{} {
+			response := AllItemsResponse{}
+			postType := "job"
+			items, _ := conf.store.GetAllPosts(&postType)
 
-		response := AllItemsResponse{}
+			for _, id := range items {
+				response = append(response, ItemListing{
+					ID:       id,
+					Location: fmt.Sprintf("/items/%d", id),
+				})
+			}
 
-		for _, id := range items {
-			response = append(response, ItemListing{
-				ID:       id,
-				Location: fmt.Sprintf("/items/%d", id),
-			})
+			return &response
+		})
+
+		if err != nil {
+			c.Logger().Error(err)
+			return c.String(http.StatusInternalServerError, "")
 		}
 
-		return c.JSON(http.StatusOK, response)
+		return c.JSON(http.StatusOK, data)
 	})
 
 	return e
