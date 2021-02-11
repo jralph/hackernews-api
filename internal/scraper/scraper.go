@@ -8,6 +8,7 @@ import (
 type Saver interface {
 	SaveTopStories(TopStoriesResponse) error
 	SaveItem(*ItemResponse) error
+	DeleteItem(*ItemResponse) error
 }
 type Client interface {
 	TopStories() (TopStoriesResponse, error)
@@ -156,7 +157,8 @@ func (s *Scraper) scrapeItem(id int) error {
 	}
 
 	if item.Deleted || item.Dead {
-		return nil
+		err := s.saver.DeleteItem(item)
+		return err
 	}
 
 	err = s.saver.SaveItem(item)

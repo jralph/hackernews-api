@@ -63,6 +63,8 @@ type MockSaver struct {
 	SaveItemResult struct {
 		Error error
 	}
+
+	deleteItemCalls int
 }
 
 func (m *MockSaver) SaveTopStories(topStories TopStoriesResponse) error {
@@ -78,6 +80,11 @@ func (m *MockSaver) SaveItem(item *ItemResponse) error {
 	m.memoryStore[itemKey] = string(data)
 
 	return m.SaveItemResult.Error
+}
+
+func (m *MockSaver) DeleteItem(item *ItemResponse) error {
+	m.deleteItemCalls++
+	return nil
 }
 
 func TestNewScraper(t *testing.T) {
@@ -104,6 +111,7 @@ func TestScrape(t *testing.T) {
 		maxKids            int
 		saverError         error
 		expectedSavedItems int
+		deletedItemCalls   int
 	}
 
 	tests := map[string]test{
@@ -114,8 +122,8 @@ func TestScrape(t *testing.T) {
 		"Scrape saves items to saver":                          {topStoriesResponse: &TopStoriesResponse{1, 2, 3, 4}, itemsResponse: &ItemResponse{Type: "story"}, expectedSavedItems: 5},
 		"Scrape handles saver error":                           {topStoriesResponse: &TopStoriesResponse{1, 2, 3, 4}, itemsResponse: &ItemResponse{}, saverError: errors.New("mock: error"), expectedSavedItems: 0},
 		"Scrape saves items to saver and follows nested items": {topStoriesResponse: &TopStoriesResponse{1, 2, 3, 4}, itemsResponse: &ItemResponse{Type: "story"}, maxKids: 5, expectedSavedItems: 10},
-		"Scrape doesnt save deleted item":                      {topStoriesResponse: &TopStoriesResponse{1, 2}, itemsResponse: &ItemResponse{Type: "story", Deleted: true}, expectedSavedItems: 1},
-		"Scrape doesnt save dead item":                         {topStoriesResponse: &TopStoriesResponse{1, 2}, itemsResponse: &ItemResponse{Type: "story", Dead: true}, expectedSavedItems: 1},
+		"Scrape doesnt save deleted item":                      {topStoriesResponse: &TopStoriesResponse{1, 2}, itemsResponse: &ItemResponse{Type: "story", Deleted: true}, expectedSavedItems: 1, deletedItemCalls: 2},
+		"Scrape doesnt save dead item":                         {topStoriesResponse: &TopStoriesResponse{1, 2}, itemsResponse: &ItemResponse{Type: "story", Dead: true}, expectedSavedItems: 1, deletedItemCalls: 2},
 	}
 
 	for name, opts := range tests {

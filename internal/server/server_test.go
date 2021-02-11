@@ -18,7 +18,7 @@ type MockStorage struct {
 	mock.Mock
 }
 
-func (m *MockStorage) GetAllItems() ([]int, error) {
+func (m *MockStorage) GetAllPosts(postType *string) ([]int, error) {
 	return []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, nil
 }
 
@@ -27,7 +27,7 @@ func (m *MockStorage) GetItem(id int) (*scraper.ItemResponse, error) {
 }
 
 func TestHTTPServerItemsEndpoint(t *testing.T) {
-	req := httptest.NewRequest("GET", "http://localhost/items", nil)
+	req := httptest.NewRequest("GET", "http://localhost/posts", nil)
 	w := httptest.NewRecorder()
 
 	storage := &MockStorage{}

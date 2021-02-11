@@ -35,6 +35,7 @@ type ItemResponse struct {
 
 type Storage interface {
 	GetAllItems() ([]int, error)
+	GetAllPosts(*string) ([]int, error)
 	GetItem(int) (*scraper.ItemResponse, error)
 }
 
@@ -63,8 +64,34 @@ func CreateServer(opts ...Option) http.Handler {
 		panic(fmt.Errorf("server: error creating server, must pass `WithStorage` option to CreateServer"))
 	}
 
+	e.GET("/", func(c echo.Context) error {
+		response := map[string]string{
+			"items":   "/items",
+			"posts":   "/posts",
+			"stories": "/stories",
+			"jobs":    "/jobs",
+		}
+
+		return c.JSON(http.StatusOK, response)
+	})
+
 	e.GET("/items", func(c echo.Context) error {
 		items, _ := conf.store.GetAllItems()
+
+		response := AllItemsResponse{}
+
+		for _, id := range items {
+			response = append(response, ItemListing{
+				ID:       id,
+				Location: fmt.Sprintf("/items/%d", id),
+			})
+		}
+
+		return c.JSON(http.StatusOK, response)
+	})
+
+	e.GET("/posts", func(c echo.Context) error {
+		items, _ := conf.store.GetAllPosts(nil)
 
 		response := AllItemsResponse{}
 
@@ -121,6 +148,38 @@ func CreateServer(opts ...Option) http.Handler {
 		}
 
 		return c.JSON(http.StatusOK, item)
+	})
+
+	e.GET("/stories", func(c echo.Context) error {
+		postType := "story"
+		items, _ := conf.store.GetAllPosts(&postType)
+
+		response := AllItemsResponse{}
+
+		for _, id := range items {
+			response = append(response, ItemListing{
+				ID:       id,
+				Location: fmt.Sprintf("/items/%d", id),
+			})
+		}
+
+		return c.JSON(http.StatusOK, response)
+	})
+
+	e.GET("/jobs", func(c echo.Context) error {
+		postType := "job"
+		items, _ := conf.store.GetAllPosts(&postType)
+
+		response := AllItemsResponse{}
+
+		for _, id := range items {
+			response = append(response, ItemListing{
+				ID:       id,
+				Location: fmt.Sprintf("/items/%d", id),
+			})
+		}
+
+		return c.JSON(http.StatusOK, response)
 	})
 
 	return e

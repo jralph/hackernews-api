@@ -55,10 +55,39 @@ func (r *Redis) SaveItem(item *scraper.ItemResponse) error {
 	return r.client.Set(ctx, fmt.Sprintf("hn_item_%s_%d", item.Type, item.ID), data, 0).Err()
 }
 
+func (r *Redis) DeleteItem(item *scraper.ItemResponse) error {
+	return r.client.Del(ctx, fmt.Sprintf("hn_item_%s_%d", item.Type, item.ID)).Err()
+}
+
 func (r *Redis) GetAllItems() ([]int, error) {
 	keys, _ := r.client.Keys(ctx, "hn_item_*").Result()
 
-	matchesPost := regexp.MustCompile(`hn_item_(story|job|poll|ask)_([0-9]+)`)
+	matchesPost := regexp.MustCompile(`hn_item_(story|job|poll|comment|pollopt)_([0-9]+)`)
+
+	var items []int
+	for _, key := range keys {
+		if !matchesPost.MatchString(key) {
+			continue
+		}
+
+		match := matchesPost.FindStringSubmatch(key)
+
+		foundId, _ := strconv.Atoi(match[2])
+		items = append(items, foundId)
+	}
+
+	return items, nil
+}
+
+func (r *Redis) GetAllPosts(postType *string) ([]int, error) {
+	keys, _ := r.client.Keys(ctx, "hn_item_*").Result()
+
+	searchTypes := "story|job|poll"
+	if postType != nil {
+		searchTypes = *postType
+	}
+
+	matchesPost := regexp.MustCompile(fmt.Sprintf("hn_item_(%s)_([0-9]+)", searchTypes))
 
 	var items []int
 	for _, key := range keys {
