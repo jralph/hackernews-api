@@ -17,8 +17,8 @@ hackernews-api_redis_1             docker-entrypoint.sh redis ...   Up          
 hackernews-api_scraper_1           /scraper -redis-host=redis ...   Up             8901/tcp
 ```
 
-You can browse to the api at `0.0.0.0:55032` for example.
+You can browse to the api at `0.0.0.0:55032` for example (port taken from the above list).
 
-You can also access a UI for redis by browsing to `0.0.0.0:55021` for example.
+You can also access a UI for redis by browsing to `0.0.0.0:55021` for example (port taken from the above list).
 
 __Keep in mind all API requests get cached for 5 minutes. If you hit the api while the scraper container is running you won't have all of the data!__
