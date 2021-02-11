@@ -169,7 +169,7 @@ func CreateServer(opts ...Option) http.Handler {
 				}
 			}
 
-			return item
+			return &item
 		})
 
 		if err != nil {
