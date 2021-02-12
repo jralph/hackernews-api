@@ -47,12 +47,18 @@ func NewRedisStore(opts ...Option) *Redis {
 }
 
 func (r *Redis) SaveTopStories(topStories scraper.TopStoriesResponse) error {
-	data, _ := json.Marshal(topStories)
+	data, err := json.Marshal(topStories)
+	if err != nil {
+		return err
+	}
 	return r.client.Set(ctx, "hn_top_stories", data, 0).Err()
 }
 
 func (r *Redis) SaveItem(item *scraper.ItemResponse) error {
-	data, _ := json.Marshal(item)
+	data, err := json.Marshal(item)
+	if err != nil {
+		return err
+	}
 	return r.client.Set(ctx, fmt.Sprintf("hn_item_%s_%d", item.Type, item.ID), data, 0).Err()
 }
 
@@ -61,7 +67,10 @@ func (r *Redis) DeleteItem(item *scraper.ItemResponse) error {
 }
 
 func (r *Redis) GetAllItems() ([]int, error) {
-	keys, _ := r.client.Keys(ctx, "hn_item_*").Result()
+	keys, err := r.client.Keys(ctx, "hn_item_*").Result()
+	if err != nil {
+		return []int{}, err
+	}
 
 	matchesPost := regexp.MustCompile(`hn_item_(story|job|poll|comment|pollopt)_([0-9]+)`)
 
@@ -73,7 +82,10 @@ func (r *Redis) GetAllItems() ([]int, error) {
 
 		match := matchesPost.FindStringSubmatch(key)
 
-		foundId, _ := strconv.Atoi(match[2])
+		foundId, err := strconv.Atoi(match[2])
+		if err != nil {
+			return []int{}, err
+		}
 		items = append(items, foundId)
 	}
 
@@ -81,7 +93,10 @@ func (r *Redis) GetAllItems() ([]int, error) {
 }
 
 func (r *Redis) GetAllPosts(postType *string) ([]int, error) {
-	keys, _ := r.client.Keys(ctx, "hn_item_*").Result()
+	keys, err := r.client.Keys(ctx, "hn_item_*").Result()
+	if err != nil {
+		return []int{}, err
+	}
 
 	searchTypes := "story|job|poll"
 	if postType != nil {
@@ -98,7 +113,10 @@ func (r *Redis) GetAllPosts(postType *string) ([]int, error) {
 
 		match := matchesPost.FindStringSubmatch(key)
 
-		foundId, _ := strconv.Atoi(match[2])
+		foundId, err := strconv.Atoi(match[2])
+		if err != nil {
+			return []int{}, err
+		}
 		items = append(items, foundId)
 	}
 
@@ -106,7 +124,10 @@ func (r *Redis) GetAllPosts(postType *string) ([]int, error) {
 }
 
 func (r *Redis) GetItem(id int) (*scraper.ItemResponse, error) {
-	keys, _ := r.client.Keys(ctx, fmt.Sprintf("hn_item_*_%d", id)).Result()
+	keys, err := r.client.Keys(ctx, fmt.Sprintf("hn_item_*_%d", id)).Result()
+	if err != nil {
+		return nil, err
+	}
 
 	if len(keys) == 0 {
 		return nil, nil
@@ -116,7 +137,7 @@ func (r *Redis) GetItem(id int) (*scraper.ItemResponse, error) {
 
 	var scrapedItem scraper.ItemResponse
 
-	err := json.Unmarshal([]byte(data), &scrapedItem)
+	err = json.Unmarshal([]byte(data), &scrapedItem)
 
 	return &scrapedItem, err
 }
@@ -140,7 +161,10 @@ func (r *Redis) Cache(key string, duration time.Duration, target interface{}, f 
 	if err != nil {
 		return err
 	}
-	_ = json.Unmarshal(encoded, target)
+	err = json.Unmarshal(encoded, target)
+	if err != nil {
+		return err
+	}
 
 	return r.client.Set(ctx, key, encoded, duration).Err()
 }
