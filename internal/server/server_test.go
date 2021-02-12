@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/jralph/hackernews-api/internal/scraper"
 	"github.com/stretchr/testify/assert"
@@ -26,6 +27,18 @@ func (m *MockStorage) GetAllPosts(postType *string) ([]int, error) {
 
 func (m *MockStorage) GetItem(id int) (*scraper.ItemResponse, error) {
 	return &scraper.ItemResponse{}, nil
+}
+
+func (m *MockStorage) Cache(key string, expireAfter time.Duration, target interface{}, f func() interface{}) error {
+	toCache := f()
+
+	encoded, err := json.Marshal(toCache)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(encoded, target)
+	return err
 }
 
 func TestHTTPServerItemsEndpoint(t *testing.T) {
